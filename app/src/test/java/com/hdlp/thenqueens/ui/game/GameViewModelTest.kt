@@ -2,6 +2,7 @@ package com.hdlp.thenqueens.ui.game
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.cash.turbine.test
 import com.hdlp.thenqueens.MainDispatcherRule
 import com.hdlp.thenqueens.data.FakeBestTimeRepository
 import com.hdlp.thenqueens.data.FakeClock
@@ -158,5 +159,52 @@ class GameViewModelTest {
         val vm = viewModel()
         advanceUntilIdle()
         assertEquals(8_000L, vm.state.value.bestTimeMillis)
+    }
+
+    @Test
+    fun `placing a safe queen emits QueenPlaced`() = runVmTest {
+        val vm = viewModel()
+        vm.effects.test {
+            advanceUntilIdle()
+            vm.tap(0, 1)
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+        }
+    }
+
+    @Test
+    fun `placing a conflicting queen emits ConflictCreated`() = runVmTest {
+        val vm = viewModel()
+        vm.effects.test {
+            advanceUntilIdle()
+            vm.tap(0, 0)
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            vm.tap(0, 2)
+            assertEquals(GameEffect.ConflictCreated, awaitItem())
+        }
+    }
+
+    @Test
+    fun `solving emits Victory`() = runVmTest {
+        val vm = viewModel()
+        vm.effects.test {
+            advanceUntilIdle()
+            vm.solveFourByFour()
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            assertEquals(GameEffect.Victory, awaitItem())
+        }
+    }
+
+    @Test
+    fun `removing a queen emits no effect`() = runVmTest {
+        val vm = viewModel()
+        vm.effects.test {
+            advanceUntilIdle()
+            vm.tap(0, 1)
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            vm.tap(0, 1)
+            expectNoEvents()
+        }
     }
 }

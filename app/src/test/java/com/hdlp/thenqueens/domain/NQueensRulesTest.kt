@@ -6,12 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NQueensRulesTest {
+    private fun queens(vararg positions: Pair<Int, Int>): Set<BoardPosition> = positions.map { BoardPosition(it.first, it.second) }.toSet()
 
-    private fun queens(vararg positions: Pair<Int, Int>): Set<BoardPosition> =
-        positions.map { BoardPosition(it.first, it.second) }.toSet()
-
-    private fun solution(vararg columns: Int): Set<BoardPosition> =
-        columns.mapIndexed { row, column -> BoardPosition(row, column) }.toSet()
+    private fun solution(vararg columns: Int): Set<BoardPosition> = columns.mapIndexed { row, column -> BoardPosition(row, column) }.toSet()
 
     @Test
     fun `empty board has no conflicts`() {

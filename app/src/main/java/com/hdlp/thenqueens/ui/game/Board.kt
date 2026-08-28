@@ -66,30 +66,33 @@ private fun BoardCell(
     modifier: Modifier = Modifier,
 ) {
     val isLightSquare = (position.row + position.column) % 2 == 0
-    val description = buildString {
-        append(stringResource(R.string.cell_description, position.row + 1, position.column + 1))
-        if (hasQueen) append(stringResource(R.string.cell_queen_suffix))
-        if (isConflicting) append(stringResource(R.string.cell_conflict_suffix))
-    }
+    val description =
+        buildString {
+            append(stringResource(R.string.cell_description, position.row + 1, position.column + 1))
+            if (hasQueen) append(stringResource(R.string.cell_queen_suffix))
+            if (isConflicting) append(stringResource(R.string.cell_conflict_suffix))
+        }
     val errorColor = MaterialTheme.colorScheme.error
 
     BoxWithConstraints(
-        modifier = modifier
-            .background(if (isLightSquare) LightSquare else DarkSquare)
-            .then(if (isConflicting) Modifier.border(2.dp, errorColor) else Modifier)
-            .clickable { onTapped() }
-            .semantics {
-                contentDescription = description
-                role = Role.Button
-            },
+        modifier =
+            modifier
+                .background(if (isLightSquare) LightSquare else DarkSquare)
+                .then(if (isConflicting) Modifier.border(2.dp, errorColor) else Modifier)
+                .clickable { onTapped() }
+                .semantics {
+                    contentDescription = description
+                    role = Role.Button
+                },
         contentAlignment = Alignment.Center,
     ) {
         val queenScale by animateFloatAsState(
             targetValue = if (hasQueen) 1f else 0f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMediumLow,
-            ),
+            animationSpec =
+                spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
             label = "queenScale",
         )
         if (queenScale > 0.01f) {
@@ -98,10 +101,11 @@ private fun BoardCell(
                 text = "♛",
                 fontSize = queenFontSize,
                 color = if (isConflicting) errorColor else QueenColor,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = queenScale
-                    scaleY = queenScale
-                },
+                modifier =
+                    Modifier.graphicsLayer {
+                        scaleX = queenScale
+                        scaleY = queenScale
+                    },
             )
         }
     }
