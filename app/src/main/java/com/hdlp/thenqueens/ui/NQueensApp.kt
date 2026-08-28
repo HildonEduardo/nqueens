@@ -1,12 +1,12 @@
 package com.hdlp.thenqueens.ui
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.hdlp.thenqueens.ui.game.GameScreen
 import com.hdlp.thenqueens.ui.setup.SetupScreen
 
 object Routes {
@@ -26,7 +26,7 @@ fun NQueensApp() {
             route = Routes.GAME,
             arguments = listOf(navArgument("boardSize") { type = NavType.IntType }),
         ) {
-            Box {}
+            GameScreen(onChangeSize = { navController.popBackStack() })
         }
     }
 }
