@@ -28,10 +28,10 @@ class GameViewModel @Inject constructor(
 
     private val boardSize: Int = checkNotNull(savedStateHandle["boardSize"])
 
-    private val _state = MutableStateFlow(GameUiState(boardSize = boardSize))
+    private val _state = MutableStateFlow(restoredState())
     val state: StateFlow<GameUiState> = _state.asStateFlow()
 
-    private var startRealtimeMillis: Long? = null
+    private var startRealtimeMillis: Long? = savedStateHandle[KEY_START_REALTIME]
     private var tickerJob: Job? = null
 
     init {
@@ -40,6 +40,7 @@ class GameViewModel @Inject constructor(
                 _state.update { it.copy(bestTimeMillis = best) }
             }
         }
+        if (_state.value.status == GameStatus.IN_PROGRESS) startTicker()
     }
 
     fun onAction(action: GameAction) {
@@ -72,6 +73,7 @@ class GameViewModel @Inject constructor(
                 elapsedMillis = elapsed,
             )
         }
+        persist()
         if (solved) onSolved(elapsed)
     }
 
@@ -84,6 +86,36 @@ class GameViewModel @Inject constructor(
         stopTicker()
         startRealtimeMillis = null
         _state.update { GameUiState(boardSize = boardSize, bestTimeMillis = it.bestTimeMillis) }
+        persist()
+    }
+
+    private fun restoredState(): GameUiState {
+        val encoded = savedStateHandle.get<IntArray>(KEY_QUEENS)
+            ?: return GameUiState(boardSize = boardSize)
+        val queens = encoded.map { BoardPosition(it / boardSize, it % boardSize) }.toSet()
+        val status = GameStatus.valueOf(
+            savedStateHandle[KEY_STATUS] ?: GameStatus.NOT_STARTED.name,
+        )
+        return GameUiState(
+            boardSize = boardSize,
+            queens = queens,
+            conflicts = NQueensRules.conflictingQueens(queens),
+            status = status,
+            elapsedMillis = if (status == GameStatus.SOLVED) {
+                savedStateHandle[KEY_ELAPSED] ?: 0L
+            } else {
+                0L
+            },
+        )
+    }
+
+    private fun persist() {
+        val snapshot = _state.value
+        savedStateHandle[KEY_QUEENS] =
+            snapshot.queens.map { it.row * boardSize + it.column }.toIntArray()
+        savedStateHandle[KEY_STATUS] = snapshot.status.name
+        savedStateHandle[KEY_START_REALTIME] = startRealtimeMillis
+        savedStateHandle[KEY_ELAPSED] = snapshot.elapsedMillis
     }
 
     private fun startTimer() {
@@ -110,5 +142,9 @@ class GameViewModel @Inject constructor(
 
     companion object {
         const val TICK_MILLIS = 100L
+        internal const val KEY_QUEENS = "queens"
+        internal const val KEY_STATUS = "status"
+        internal const val KEY_START_REALTIME = "startRealtime"
+        internal const val KEY_ELAPSED = "elapsed"
     }
 }
