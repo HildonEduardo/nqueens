@@ -6,4 +6,6 @@ sealed interface GameAction {
     data class CellTapped(val position: BoardPosition) : GameAction
     data object ResetClicked : GameAction
     data object PlayAgainClicked : GameAction
+    data object PauseRequested : GameAction
+    data object ResumeRequested : GameAction
 }

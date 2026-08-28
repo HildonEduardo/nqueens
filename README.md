@@ -33,7 +33,10 @@ real time, and race your best time.
   red border — never color alone), not just the most recent one.
 - Victory dialog when exactly *n* non-conflicting queens are placed.
 - Queens-left counter, reset, elapsed timer, and per-size best times.
+- Leaderboards screen with the top-3 times for every board size.
 - Spring animation on queen placement/removal and a restrained victory celebration.
+- Sound effects for queen placement, conflicts, and victory (synthesized in-repo, no
+  licensed assets).
 - In-progress games survive rotation and process death.
 - Every board cell exposes semantics (`Row 2, column 4, queen, conflicting`) for
   TalkBack and UI tests.
@@ -59,16 +62,20 @@ Compose UI ── renders state, sends GameAction ──▶ GameViewModel
   O(q) version is a documented optimization, unjustified at n ≤ 12) and decides
   solved-ness. Fully unit-tested, including known solutions for n = 4, 5, 8.
 - **`data/`** hides side effects behind two tiny interfaces: `GameClock` (monotonic
-  time) and `BestTimeRepository` (DataStore Preferences, one key per board size).
-  ViewModel tests use hand-written fakes — no mocking framework.
+  time) and `BestTimeRepository` (DataStore Preferences, top-3 times per board size,
+  with transparent migration from the earlier single-best format). ViewModel tests use
+  hand-written fakes — no mocking framework.
 - **`ui/`** renders state and emits actions; composables contain no game logic. The
   board is regular Compose cells (not Canvas) so every cell is accessible and
   addressable in tests. Victory is *derived* from `status == SOLVED`, shown as a
-  dialog over the preserved board.
+  dialog over the preserved board. One-off events (sounds) flow through a
+  `SharedFlow<GameEffect>` with no replay — durable facts live in state, moments live
+  in effects.
 - **DI is Hilt** (Dagger): `@HiltViewModel` + one module providing the clock and
   DataStore-backed repository.
-- **Navigation Compose** with two destinations (`setup`, `game/{boardSize}`); the board
-  size travels as a nav argument into `SavedStateHandle`.
+- **Navigation Compose with type-safe routes**: `@Serializable` route classes
+  (`SetupRoute`, `GameRoute(boardSize)`, `LeaderboardRoute`) instead of string
+  patterns; the board size lands in `SavedStateHandle` under its property name.
 
 ### Package map
 
@@ -78,9 +85,11 @@ com.hdlp.thenqueens
 ├── domain/      BoardPosition, GameStatus, NQueensRules  (pure Kotlin)
 ├── data/        GameClock, BestTimeRepository, DataStore implementation
 └── ui/
-    ├── setup/   board-size selection
-    ├── game/    GameUiState, GameAction, GameViewModel, GameScreen, Board
-    └── victory/ VictoryDialog
+    ├── setup/       board-size selection with the chess hero header
+    ├── game/        GameUiState, GameAction, GameEffect, GameViewModel, GameScreen,
+    │                Board, SoundEffects
+    ├── leaderboard/ LeaderboardViewModel, LeaderboardScreen
+    └── victory/     VictoryDialog
 ```
 
 ## Key decisions and assumptions
@@ -92,8 +101,8 @@ com.hdlp.thenqueens
   **includes time spent with the app backgrounded** (it is a real-time clock, measured
   with `elapsedRealtime` from a start timestamp — the display ticker is not the source
   of truth).
-- Best times are stored independently per board size and only overwritten by
-  improvements.
+- The top three times are kept per board size, sorted fastest-first; a result is
+  recorded only when it enters that top three.
 - Restoration: board, status, and timing reference are saved through
   `SavedStateHandle`. A device reboot between process death and restore resets the tick
   baseline (elapsed time is clamped, never negative).
@@ -105,18 +114,17 @@ com.hdlp.thenqueens
 | Suite | What it covers | Run with |
 |---|---|---|
 | `domain` (15 tests) | Every conflict axis, multi-queen conflicts return all participants, symmetry/translation properties, known solutions for n = 4, 5, 8, not-solved cases | `testDebugUnitTest` |
-| `data` (3 tests) | DataStore repository: first save, improvement-only overwrites, per-size isolation | `testDebugUnitTest` |
-| `ViewModel` (18 tests) | Place/remove/limit, conflict recalculation, timer start/tick/reset, solved-exactly-once, best-time save, SavedStateHandle round-trips | `testDebugUnitTest` |
-| UI journeys (4 tests) | Select size → board renders; conflicts marked; reset clears; solve 4×4 → victory dialog | `connectedDebugAndroidTest` |
+| `data` (5 tests) | DataStore repository: first save, improvement-only recording, per-size isolation, top-3 trimming, legacy single-best migration | `testDebugUnitTest` |
+| `ViewModel` (24 tests) | Place/remove/limit, conflict recalculation, timer start/tick/reset, solved-exactly-once, best-time save, sound-effect emissions, SavedStateHandle round-trips, leaderboard entries | `testDebugUnitTest` |
+| UI journeys (5 tests) | Select size → board renders; conflicts marked; reset clears; leaderboard opens and returns; solve 4×4 → victory dialog | `connectedDebugAndroidTest` |
 
 UI tests validate wiring and semantics only — domain behavior is not re-tested through
 the UI.
 
 ## Known limitations and next steps
 
-- No sound effects (kept out deliberately; they add lifecycle concerns with little
-  architectural value).
 - No undo/redo, hints, or threatened-square preview — each is a small, local extension
   (new `GameAction` + pure rule function + rendering change) by design.
+- No in-app sound toggle; effects respect the device volume.
 - Landscape works but is not optimized (no two-pane layout).
 - Timer semantics across reboot are documented above rather than preserved.

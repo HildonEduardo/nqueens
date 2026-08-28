@@ -17,4 +17,12 @@
     <string name="victory_new_best">New best time!</string>
     <string name="play_again">Play again</string>
     <string name="change_size">Change size</string>
+    <string name="leaderboard_title">Leaderboards</string>
+    <string name="leaderboard_empty_title">No victories yet</string>
+    <string name="leaderboard_empty_hint">Solve a board to claim a spot</string>
+    <string name="back">Back</string>
+    <string name="give_up_title">Give up?</string>
+    <string name="give_up_message">Leaving now ends this run. The timer is paused while you decide.</string>
+    <string name="give_up_confirm">Give up</string>
+    <string name="keep_playing">Keep playing</string>
 </resources>

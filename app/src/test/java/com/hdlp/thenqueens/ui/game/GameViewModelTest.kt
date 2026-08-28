@@ -133,7 +133,7 @@ class GameViewModelTest {
 
     @Test
     fun `reset restores the initial state but keeps the best time`() = runVmTest {
-        repository.bestTimes.value = mapOf(4 to 9_000L)
+        repository.topTimes.value = mapOf(4 to listOf(9_000L))
         val vm = viewModel()
         advanceUntilIdle()
         vm.tap(0, 0); vm.tap(0, 1)
@@ -155,7 +155,7 @@ class GameViewModelTest {
 
     @Test
     fun `best time flow is reflected in state`() = runVmTest {
-        repository.bestTimes.value = mapOf(4 to 8_000L)
+        repository.topTimes.value = mapOf(4 to listOf(8_000L))
         val vm = viewModel()
         advanceUntilIdle()
         assertEquals(8_000L, vm.state.value.bestTimeMillis)
@@ -206,5 +206,85 @@ class GameViewModelTest {
             vm.tap(0, 1)
             expectNoEvents()
         }
+    }
+
+    @Test
+    fun `pause freezes elapsed time`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        clock.nowMillis = 2_000L
+        vm.onAction(GameAction.PauseRequested)
+        assertEquals(2_000L, vm.state.value.elapsedMillis)
+        clock.nowMillis = 10_000L
+        advanceTimeBy(GameViewModel.TICK_MILLIS * 5)
+        assertEquals(2_000L, vm.state.value.elapsedMillis)
+    }
+
+    @Test
+    fun `resume excludes the paused duration`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        clock.nowMillis = 2_000L
+        vm.onAction(GameAction.PauseRequested)
+        clock.nowMillis = 60_000L
+        vm.onAction(GameAction.ResumeRequested)
+        clock.nowMillis = 61_000L
+        advanceTimeBy(GameViewModel.TICK_MILLIS + 1)
+        assertEquals(3_000L, vm.state.value.elapsedMillis)
+    }
+
+    @Test
+    fun `pause before the first move is a no-op`() = runVmTest {
+        val vm = viewModel()
+        vm.onAction(GameAction.PauseRequested)
+        vm.onAction(GameAction.ResumeRequested)
+        assertEquals(GameStatus.NOT_STARTED, vm.state.value.status)
+        clock.nowMillis = 5_000L
+        vm.tap(0, 1)
+        clock.nowMillis = 6_000L
+        advanceTimeBy(GameViewModel.TICK_MILLIS + 1)
+        assertEquals(1_000L, vm.state.value.elapsedMillis)
+    }
+
+    @Test
+    fun `taps while paused are ignored`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.PauseRequested)
+        vm.tap(1, 3)
+        assertEquals(setOf(BoardPosition(0, 1)), vm.state.value.queens)
+    }
+
+    @Test
+    fun `reset clears the paused state`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        clock.nowMillis = 2_000L
+        vm.onAction(GameAction.PauseRequested)
+        vm.onAction(GameAction.ResetClicked)
+        clock.nowMillis = 5_000L
+        vm.tap(0, 1)
+        clock.nowMillis = 6_000L
+        advanceTimeBy(GameViewModel.TICK_MILLIS + 1)
+        assertEquals(1_000L, vm.state.value.elapsedMillis)
+    }
+
+    @Test
+    fun `paused game survives recreation with frozen elapsed time`() = runVmTest {
+        val handle = SavedStateHandle(mapOf("boardSize" to 4))
+        val first = GameViewModel(handle, clock, repository).also { createdViewModels += it }
+        first.tap(0, 1)
+        clock.nowMillis = 2_000L
+        first.onAction(GameAction.PauseRequested)
+
+        val second = GameViewModel(handle, clock, repository).also { createdViewModels += it }
+        clock.nowMillis = 30_000L
+        advanceTimeBy(GameViewModel.TICK_MILLIS * 5)
+        assertEquals(2_000L, second.state.value.elapsedMillis)
+
+        second.onAction(GameAction.ResumeRequested)
+        clock.nowMillis = 31_000L
+        advanceTimeBy(GameViewModel.TICK_MILLIS + 1)
+        assertEquals(3_000L, second.state.value.elapsedMillis)
     }
 }

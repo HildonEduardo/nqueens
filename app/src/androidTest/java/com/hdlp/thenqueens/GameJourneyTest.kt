@@ -56,6 +56,15 @@ class GameJourneyTest {
     }
 
     @Test
+    fun leaderboard_opensAndNavigatesBack() {
+        composeRule.onNodeWithText("Leaderboards").performClick()
+        composeRule.onNodeWithContentDescription("Back").assertExists()
+        composeRule.onNodeWithText("Leaderboards").assertExists()
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        composeRule.onNodeWithText("Choose your board").assertExists()
+    }
+
+    @Test
     fun solvingFourByFour_showsVictoryDialog() {
         startGame(4)
         tapCell(1, 2)

@@ -3,6 +3,7 @@ package com.hdlp.thenqueens.ui.setup
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -10,11 +11,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.domain.NQueensRules
+import com.hdlp.thenqueens.ui.preview.NQueensPreview
+import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
 import com.hdlp.thenqueens.ui.theme.DarkSquare
 import com.hdlp.thenqueens.ui.theme.LightSquare
 import com.hdlp.thenqueens.ui.theme.QueenColor
@@ -40,46 +47,59 @@ import kotlin.math.ceil
 
 const val MAX_PRESET_SIZE = 12
 
+private val HeaderHeight = 200.dp
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SetupScreen(
     onStart: (Int) -> Unit,
+    onLeaderboards: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedSize by rememberSaveable { mutableIntStateOf(8) }
 
-    Column(modifier.fillMaxSize()) {
-        ChessHeader(Modifier.fillMaxWidth())
-        Column(
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                stringResource(R.string.setup_title),
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.setup_subtitle, selectedSize),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(24.dp))
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        // The scroll makes the column's height unbounded, so the min height re-creates
+        // what weight(1f) used to do: center the content in the leftover viewport when
+        // it fits, and only scroll (e.g. in landscape) when it doesn't.
+        val minContentHeight = (maxHeight - HeaderHeight).coerceAtLeast(0.dp)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            ChessHeader(Modifier.fillMaxWidth())
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(min = minContentHeight).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                (NQueensRules.MIN_BOARD_SIZE..MAX_PRESET_SIZE).forEach { size ->
-                    FilterChip(
-                        selected = size == selectedSize,
-                        onClick = { selectedSize = size },
-                        label = { Text(stringResource(R.string.board_size_option, size)) },
-                    )
+                Text(
+                    stringResource(R.string.setup_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.setup_subtitle, selectedSize),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(24.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                ) {
+                    (NQueensRules.MIN_BOARD_SIZE..MAX_PRESET_SIZE).forEach { size ->
+                        FilterChip(
+                            selected = size == selectedSize,
+                            onClick = { selectedSize = size },
+                            label = { Text(stringResource(R.string.board_size_option, size)) },
+                        )
+                    }
                 }
-            }
-            Spacer(Modifier.height(32.dp))
-            Button(onClick = { onStart(selectedSize) }) {
-                Text(stringResource(R.string.start_game))
+                Spacer(Modifier.height(32.dp))
+                Button(onClick = { onStart(selectedSize) }) {
+                    Text(stringResource(R.string.start_game))
+                }
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onLeaderboards) {
+                    Text(stringResource(R.string.leaderboard_title))
+                }
             }
         }
     }
@@ -89,7 +109,7 @@ fun SetupScreen(
 // chessboard looks the same at night; the scrim keeps title and status bar readable.
 @Composable
 private fun ChessHeader(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.height(200.dp)) {
+    Box(modifier = modifier.height(HeaderHeight)) {
         Canvas(Modifier.matchParentSize()) {
             val cell = 40.dp.toPx()
             val cols = ceil(size.width / cell).toInt()
@@ -133,5 +153,13 @@ private fun ChessHeader(modifier: Modifier = Modifier) {
                     .align(Alignment.BottomStart)
                     .padding(horizontal = 24.dp, vertical = 18.dp),
         )
+    }
+}
+
+@NQueensPreview
+@Composable
+private fun SetupScreenPreview() {
+    NQueensPreviewSurface {
+        SetupScreen(onStart = {}, onLeaderboards = {})
     }
 }

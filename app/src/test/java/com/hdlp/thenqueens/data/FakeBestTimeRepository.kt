@@ -7,21 +7,23 @@ import kotlinx.coroutines.flow.update
 
 class FakeBestTimeRepository : BestTimeRepository {
 
-    val bestTimes = MutableStateFlow<Map<Int, Long>>(emptyMap())
+    val topTimes = MutableStateFlow<Map<Int, List<Long>>>(emptyMap())
     val saveCalls = mutableListOf<Pair<Int, Long>>()
 
     override fun observeBestTime(boardSize: Int): Flow<Long?> =
-        bestTimes.map { it[boardSize] }
+        topTimes.map { it[boardSize]?.firstOrNull() }
+
+    override fun observeTopTimes(boardSize: Int): Flow<List<Long>> =
+        topTimes.map { it[boardSize].orEmpty() }
 
     override suspend fun saveIfBetter(boardSize: Int, elapsedMillis: Long) {
         saveCalls += boardSize to elapsedMillis
-        bestTimes.update { current ->
-            val existing = current[boardSize]
-            if (existing == null || elapsedMillis < existing) {
-                current + (boardSize to elapsedMillis)
-            } else {
-                current
-            }
+        topTimes.update { current ->
+            val updated =
+                (current[boardSize].orEmpty() + elapsedMillis)
+                    .sorted()
+                    .take(BestTimeRepository.TOP_TIMES_COUNT)
+            current + (boardSize to updated)
         }
     }
 }

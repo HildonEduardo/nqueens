@@ -1,6 +1,8 @@
 package com.hdlp.thenqueens.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import app.cash.turbine.test
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -48,6 +50,33 @@ class DataStoreBestTimeRepositoryTest {
         repository.saveIfBetter(5, 3_000L)
         repository.observeBestTime(4).test {
             assertEquals(9_000L, awaitItem())
+        }
+    }
+
+    @Test
+    fun `keeps only the three fastest times, sorted`() = runTest {
+        val repository = repository()
+        repository.saveIfBetter(4, 9_000L)
+        repository.saveIfBetter(4, 5_000L)
+        repository.saveIfBetter(4, 12_000L)
+        repository.saveIfBetter(4, 7_000L)
+        repository.observeTopTimes(4).test {
+            assertEquals(listOf(5_000L, 7_000L, 9_000L), awaitItem())
+        }
+    }
+
+    @Test
+    fun `a pre-leaderboard single best time seeds the top list`() = runTest {
+        val dataStore =
+            PreferenceDataStoreFactory.create(scope = backgroundScope) {
+                tmp.newFile("legacy.preferences_pb")
+            }
+        dataStore.edit { it[longPreferencesKey("best_time_4")] = 8_000L }
+        val repository = DataStoreBestTimeRepository(dataStore)
+        repository.observeTopTimes(4).test {
+            assertEquals(listOf(8_000L), awaitItem())
+            repository.saveIfBetter(4, 6_000L)
+            assertEquals(listOf(6_000L, 8_000L), awaitItem())
         }
     }
 }

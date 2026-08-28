@@ -45,6 +45,7 @@ class GameViewModel
         val effects: SharedFlow<GameEffect> = _effects.asSharedFlow()
 
         private var startRealtimeMillis: Long? = savedStateHandle[KEY_START_REALTIME]
+        private var pausedAtRealtimeMillis: Long? = savedStateHandle[KEY_PAUSED_AT]
         private var tickerJob: Job? = null
 
         init {
@@ -53,19 +54,23 @@ class GameViewModel
                     _state.update { it.copy(bestTimeMillis = best) }
                 }
             }
-            if (_state.value.status == GameStatus.IN_PROGRESS) startTicker()
+            if (_state.value.status == GameStatus.IN_PROGRESS && pausedAtRealtimeMillis == null) {
+                startTicker()
+            }
         }
 
         fun onAction(action: GameAction) {
             when (action) {
                 is GameAction.CellTapped -> onCellTapped(action.position)
                 GameAction.ResetClicked, GameAction.PlayAgainClicked -> reset()
+                GameAction.PauseRequested -> pause()
+                GameAction.ResumeRequested -> resume()
             }
         }
 
         private fun onCellTapped(position: BoardPosition) {
             val current = _state.value
-            if (current.status == GameStatus.SOLVED) return
+            if (current.status == GameStatus.SOLVED || pausedAtRealtimeMillis != null) return
             if (position.row !in 0 until boardSize || position.column !in 0 until boardSize) return
 
             val queens =
@@ -110,8 +115,26 @@ class GameViewModel
         private fun reset() {
             stopTicker()
             startRealtimeMillis = null
+            pausedAtRealtimeMillis = null
             _state.update { GameUiState(boardSize = boardSize, bestTimeMillis = it.bestTimeMillis) }
             persist()
+        }
+
+        private fun pause() {
+            if (_state.value.status != GameStatus.IN_PROGRESS || pausedAtRealtimeMillis != null) return
+            stopTicker()
+            pausedAtRealtimeMillis = clock.elapsedRealtimeMillis()
+            _state.update { it.copy(elapsedMillis = elapsedNow()) }
+            persist()
+        }
+
+        private fun resume() {
+            val pausedAt = pausedAtRealtimeMillis ?: return
+            // Shift the start forward by the pause span so paused time never counts.
+            startRealtimeMillis = startRealtimeMillis?.plus(clock.elapsedRealtimeMillis() - pausedAt)
+            pausedAtRealtimeMillis = null
+            persist()
+            startTicker()
         }
 
         private fun restoredState(): GameUiState {
@@ -128,8 +151,9 @@ class GameViewModel
                 queens = queens,
                 conflicts = NQueensRules.conflictingQueens(queens),
                 status = status,
+                // The ticker won't run while solved or paused, so restore the frozen value.
                 elapsedMillis =
-                    if (status == GameStatus.SOLVED) {
+                    if (status == GameStatus.SOLVED || savedStateHandle.get<Long>(KEY_PAUSED_AT) != null) {
                         savedStateHandle[KEY_ELAPSED] ?: 0L
                     } else {
                         0L
@@ -143,6 +167,7 @@ class GameViewModel
                 snapshot.queens.map { it.row * boardSize + it.column }.toIntArray()
             savedStateHandle[KEY_STATUS] = snapshot.status.name
             savedStateHandle[KEY_START_REALTIME] = startRealtimeMillis
+            savedStateHandle[KEY_PAUSED_AT] = pausedAtRealtimeMillis
             savedStateHandle[KEY_ELAPSED] = snapshot.elapsedMillis
         }
 
@@ -173,6 +198,7 @@ class GameViewModel
             internal const val KEY_QUEENS = "queens"
             internal const val KEY_STATUS = "status"
             internal const val KEY_START_REALTIME = "startRealtime"
+            internal const val KEY_PAUSED_AT = "pausedAt"
             internal const val KEY_ELAPSED = "elapsed"
         }
     }

@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.hdlp.thenqueens.ui.game.GameScreen
+import com.hdlp.thenqueens.ui.leaderboard.LeaderboardScreen
 import com.hdlp.thenqueens.ui.setup.SetupScreen
 import kotlinx.serialization.Serializable
 
@@ -17,15 +18,24 @@ data class GameRoute(
     val boardSize: Int,
 )
 
+@Serializable
+data object LeaderboardRoute
+
 @Composable
 fun NQueensApp() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = SetupRoute) {
         composable<SetupRoute> {
-            SetupScreen(onStart = { size -> navController.navigate(GameRoute(size)) })
+            SetupScreen(
+                onStart = { size -> navController.navigate(GameRoute(size)) },
+                onLeaderboards = { navController.navigate(LeaderboardRoute) },
+            )
+        }
+        composable<LeaderboardRoute> {
+            LeaderboardScreen(onBack = { navController.popBackStack() })
         }
         composable<GameRoute> {
-            GameScreen(onChangeSize = { navController.popBackStack() })
+            GameScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }
