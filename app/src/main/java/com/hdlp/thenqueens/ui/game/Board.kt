@@ -1,5 +1,8 @@
 package com.hdlp.thenqueens.ui.game
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -79,12 +84,24 @@ private fun BoardCell(
             },
         contentAlignment = Alignment.Center,
     ) {
-        if (hasQueen) {
+        val queenScale by animateFloatAsState(
+            targetValue = if (hasQueen) 1f else 0f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+            label = "queenScale",
+        )
+        if (queenScale > 0.01f) {
             val queenFontSize = with(LocalDensity.current) { (maxWidth * 0.6f).toSp() }
             Text(
                 text = "♛",
                 fontSize = queenFontSize,
                 color = if (isConflicting) errorColor else QueenColor,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = queenScale
+                    scaleY = queenScale
+                },
             )
         }
     }
