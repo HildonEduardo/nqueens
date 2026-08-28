@@ -1,5 +1,6 @@
 package com.hdlp.thenqueens.ui.victory
 
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -18,9 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.ui.game.formatElapsed
+import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
 
 @Composable
 fun VictoryDialog(
@@ -73,4 +76,19 @@ fun VictoryDialog(
             TextButton(onClick = onChangeSize) { Text(stringResource(R.string.change_size)) }
         },
     )
+}
+
+@Preview(name = "new best")
+@Preview(name = "new best (dark)", uiMode = UI_MODE_NIGHT_YES)
+@Composable
+private fun VictoryDialogPreview() {
+    NQueensPreviewSurface {
+        VictoryDialog(
+            elapsedMillis = 61_002L,
+            bestTimeMillis = 83_456L,
+            onPlayAgain = {},
+            onChangeSize = {},
+            onDismiss = {},
+        )
+    }
 }

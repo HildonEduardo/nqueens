@@ -1,11 +1,15 @@
 package com.hdlp.thenqueens.ui.game
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -22,12 +26,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hdlp.thenqueens.R
+import com.hdlp.thenqueens.domain.BoardPosition
+import com.hdlp.thenqueens.domain.GameStatus
+import com.hdlp.thenqueens.ui.preview.NQueensPreview
+import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
 import com.hdlp.thenqueens.ui.victory.VictoryDialog
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     onChangeSize: () -> Unit,
@@ -40,47 +48,7 @@ fun GameScreen(
         viewModel.effects.collect { soundPlayer.play(it) }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(formatElapsed(state.elapsedMillis)) },
-                actions = {
-                    TextButton(onClick = { viewModel.onAction(GameAction.ResetClicked) }) {
-                        Text(stringResource(R.string.reset))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    stringResource(R.string.queens_left, state.queensLeft),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                state.bestTimeMillis?.let {
-                    Text(
-                        stringResource(R.string.best_time, formatElapsed(it)),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-            }
-            Board(
-                boardSize = state.boardSize,
-                queens = state.queens,
-                conflicts = state.conflicts,
-                onCellTapped = { viewModel.onAction(GameAction.CellTapped(it)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
+    GameScreenContent(state = state, onAction = viewModel::onAction)
 
     var victoryDismissed by rememberSaveable(state.status) { mutableStateOf(false) }
     if (state.isSolved && !victoryDismissed) {
@@ -90,6 +58,87 @@ fun GameScreen(
             onPlayAgain = { viewModel.onAction(GameAction.PlayAgainClicked) },
             onChangeSize = onChangeSize,
             onDismiss = { victoryDismissed = true },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameScreenContent(
+    state: GameUiState,
+    onAction: (GameAction) -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(formatElapsed(state.elapsedMillis)) },
+                actions = {
+                    TextButton(onClick = { onAction(GameAction.ResetClicked) }) {
+                        Text(stringResource(R.string.reset))
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        BoxWithConstraints(Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+            // The square board must fit the viewport's short edge or landscape squashes
+            // its cells; the scroll absorbs whatever the status row adds beyond that.
+            val boardSide = min(maxWidth, maxHeight)
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        stringResource(R.string.queens_left, state.queensLeft),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    state.bestTimeMillis?.let {
+                        Text(
+                            stringResource(R.string.best_time, formatElapsed(it)),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                }
+                Board(
+                    boardSize = state.boardSize,
+                    queens = state.queens,
+                    conflicts = state.conflicts,
+                    onCellTapped = { onAction(GameAction.CellTapped(it)) },
+                    modifier = Modifier.width(boardSide),
+                )
+            }
+        }
+    }
+}
+
+@NQueensPreview
+@Composable
+private fun GameScreenPreview() {
+    NQueensPreviewSurface {
+        GameScreenContent(
+            state = GameUiState(
+                boardSize = 8,
+                queens = setOf(
+                    BoardPosition(row = 0, column = 0),
+                    BoardPosition(row = 1, column = 4),
+                    BoardPosition(row = 3, column = 1),
+                    BoardPosition(row = 5, column = 2),
+                    BoardPosition(row = 7, column = 2),
+                ),
+                conflicts = setOf(
+                    BoardPosition(row = 5, column = 2),
+                    BoardPosition(row = 7, column = 2),
+                ),
+                status = GameStatus.IN_PROGRESS,
+                elapsedMillis = 83_456L,
+                bestTimeMillis = 61_002L,
+            ),
+            onAction = {},
         )
     }
 }
