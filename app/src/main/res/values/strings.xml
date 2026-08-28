@@ -10,4 +10,10 @@
     <string name="cell_description">Row %1$d, column %2$d</string>
     <string name="cell_queen_suffix">", queen"</string>
     <string name="cell_conflict_suffix">", conflicting"</string>
+    <string name="victory_title">You solved it!</string>
+    <string name="victory_time">Time: %1$s</string>
+    <string name="victory_best">Best: %1$s</string>
+    <string name="victory_new_best">New best time!</string>
+    <string name="play_again">Play again</string>
+    <string name="change_size">Change size</string>
 </resources>

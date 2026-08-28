@@ -14,6 +14,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -21,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hdlp.thenqueens.R
+import com.hdlp.thenqueens.ui.victory.VictoryDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,5 +74,16 @@ fun GameScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+
+    var victoryDismissed by rememberSaveable(state.status) { mutableStateOf(false) }
+    if (state.isSolved && !victoryDismissed) {
+        VictoryDialog(
+            elapsedMillis = state.elapsedMillis,
+            bestTimeMillis = state.bestTimeMillis,
+            onPlayAgain = { viewModel.onAction(GameAction.PlayAgainClicked) },
+            onChangeSize = onChangeSize,
+            onDismiss = { victoryDismissed = true },
+        )
     }
 }
