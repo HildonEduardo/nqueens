@@ -1,31 +1,30 @@
 package com.hdlp.thenqueens.ui
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.hdlp.thenqueens.ui.game.GameScreen
 import com.hdlp.thenqueens.ui.setup.SetupScreen
+import kotlinx.serialization.Serializable
 
-object Routes {
-    const val SETUP = "setup"
-    const val GAME = "game/{boardSize}"
-    fun game(boardSize: Int) = "game/$boardSize"
-}
+@Serializable
+data object SetupRoute
+
+// The property name is the SavedStateHandle key GameViewModel reads ("boardSize").
+@Serializable
+data class GameRoute(
+    val boardSize: Int,
+)
 
 @Composable
 fun NQueensApp() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = Routes.SETUP) {
-        composable(Routes.SETUP) {
-            SetupScreen(onStart = { size -> navController.navigate(Routes.game(size)) })
+    NavHost(navController = navController, startDestination = SetupRoute) {
+        composable<SetupRoute> {
+            SetupScreen(onStart = { size -> navController.navigate(GameRoute(size)) })
         }
-        composable(
-            route = Routes.GAME,
-            arguments = listOf(navArgument("boardSize") { type = NavType.IntType }),
-        ) {
+        composable<GameRoute> {
             GameScreen(onChangeSize = { navController.popBackStack() })
         }
     }
