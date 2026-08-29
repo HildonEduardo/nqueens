@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +43,7 @@ import com.hdlp.thenqueens.domain.BoardPosition
 import com.hdlp.thenqueens.domain.GameStatus
 import com.hdlp.thenqueens.ui.preview.NQueensPreview
 import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
+import com.hdlp.thenqueens.ui.theme.NQueensTheme
 import com.hdlp.thenqueens.ui.victory.VictoryDialog
 
 @Composable
@@ -113,6 +113,7 @@ private fun GameScreenContent(
     onBackClicked: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
+        val dimens = NQueensTheme.dimens
         // A wide viewport trades the top bar for a side panel: the board gets the full
         // height, and the stats fill the otherwise-empty flank at display type sizes.
         val isWide = maxWidth > maxHeight
@@ -136,13 +137,13 @@ private fun GameScreenContent(
                     state = state,
                     onAction = onAction,
                     onBackClicked = onBackClicked,
-                    modifier = Modifier.padding(padding).fillMaxSize().padding(8.dp),
+                    modifier = Modifier.padding(padding).fillMaxSize().padding(dimens.spacingS),
                 )
             } else {
                 TallGameContent(
                     state = state,
                     onAction = onAction,
-                    modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
+                    modifier = Modifier.padding(padding).fillMaxSize().padding(dimens.spacingM),
                 )
             }
         }
@@ -156,11 +157,12 @@ private fun TallGameContent(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier) {
+        val dimens = NQueensTheme.dimens
         val boardSide = min(maxWidth, maxHeight)
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(dimens.spacingM),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -195,9 +197,10 @@ private fun WideGameContent(
     onBackClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dimens = NQueensTheme.dimens
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(dimens.spacingM),
     ) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
             val boardSide = min(maxWidth, maxHeight)
@@ -214,7 +217,7 @@ private fun WideGameContent(
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(dimens.spacingM, Alignment.CenterVertically),
             ) {
                 Text(
                     formatElapsed(state.elapsedMillis),
@@ -233,7 +236,7 @@ private fun WideGameContent(
                 }
                 FilledTonalButton(onClick = { onAction(GameAction.ResetClicked) }) {
                     Icon(Icons.Filled.Refresh, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(dimens.spacingS))
                     Text(
                         stringResource(R.string.reset),
                         style = MaterialTheme.typography.titleMedium,

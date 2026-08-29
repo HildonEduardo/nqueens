@@ -108,6 +108,14 @@ com.hdlp.thenqueens
   baseline (elapsed time is clamped, never negative).
 - The UI offers presets 4–12 to keep touch targets usable; the domain has no upper
   bound.
+- Adaptivity is centralized in a small design system (`ui/theme`): hand-rolled window
+  size classes using Material's canonical breakpoints (600/840 dp widths), a `Dimens`
+  token set (spacing scale, content max-width, header cap) selected per width class,
+  and typography that scales up ~15% on expanded widths. Windows with a compact height
+  fall back to the phone treatment (`tokenWidthClass`), so landscape phones keep
+  compact spacing and type. Screens read `NQueensTheme.dimens` instead of hardcoding
+  dp values. No adaptive library was added — the breakpoint values stay owned by this
+  codebase and trivially explainable.
 
 ## Testing strategy
 

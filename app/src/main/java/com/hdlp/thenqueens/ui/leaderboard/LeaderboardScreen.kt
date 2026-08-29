@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -44,6 +46,7 @@ import com.hdlp.thenqueens.ui.game.formatElapsed
 import com.hdlp.thenqueens.ui.preview.NQueensPreview
 import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
 import com.hdlp.thenqueens.ui.theme.LightSquare
+import com.hdlp.thenqueens.ui.theme.NQueensTheme
 import com.hdlp.thenqueens.ui.theme.QueenColor
 
 private val MEDALS = listOf("🥇", "🥈", "🥉")
@@ -81,13 +84,21 @@ private fun LeaderboardContent(
         if (entries.isEmpty()) {
             EmptyLeaderboard(Modifier.padding(padding).fillMaxSize())
         } else {
-            LazyColumn(
-                modifier = Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(entries, key = { it.boardSize }) { entry ->
-                    LeaderboardCard(entry)
+            val dimens = NQueensTheme.dimens
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .widthIn(max = dimens.contentMaxWidth)
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
+                    contentPadding = PaddingValues(dimens.spacingM),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(entries, key = { it.boardSize }) { entry ->
+                        LeaderboardCard(entry)
+                    }
                 }
             }
         }
@@ -145,8 +156,9 @@ private fun BoardSizeBadge(
 
 @Composable
 private fun EmptyLeaderboard(modifier: Modifier = Modifier) {
+    val dimens = NQueensTheme.dimens
     Column(
-        modifier = modifier.verticalScroll(rememberScrollState()).padding(32.dp),
+        modifier = modifier.verticalScroll(rememberScrollState()).padding(dimens.spacingXl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -160,7 +172,7 @@ private fun EmptyLeaderboard(modifier: Modifier = Modifier) {
             stringResource(R.string.leaderboard_empty_title),
             style = MaterialTheme.typography.headlineSmall,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(dimens.spacingXs))
         Text(
             stringResource(R.string.leaderboard_empty_hint),
             style = MaterialTheme.typography.bodyMedium,

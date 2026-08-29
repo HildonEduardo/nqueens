@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -32,22 +33,23 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.min
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.domain.NQueensRules
 import com.hdlp.thenqueens.ui.preview.NQueensPreview
 import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
 import com.hdlp.thenqueens.ui.theme.DarkSquare
 import com.hdlp.thenqueens.ui.theme.LightSquare
+import com.hdlp.thenqueens.ui.theme.NQueensTheme
 import com.hdlp.thenqueens.ui.theme.QueenColor
 import kotlin.math.ceil
 
 const val MAX_PRESET_SIZE = 12
-
-private val HeaderHeight = 200.dp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -59,14 +61,24 @@ fun SetupScreen(
     var selectedSize by rememberSaveable { mutableIntStateOf(8) }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
+        val dimens = NQueensTheme.dimens
+        val headerHeight = min(dimens.headerMaxHeight, maxHeight * dimens.headerMaxHeightFraction)
         // The scroll makes the column's height unbounded, so the min height re-creates
         // what weight(1f) used to do: center the content in the leftover viewport when
         // it fits, and only scroll (e.g. in landscape) when it doesn't.
-        val minContentHeight = (maxHeight - HeaderHeight).coerceAtLeast(0.dp)
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            ChessHeader(Modifier.fillMaxWidth())
+        val minContentHeight = (maxHeight - headerHeight).coerceAtLeast(0.dp)
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            ChessHeader(height = headerHeight, modifier = Modifier.fillMaxWidth())
             Column(
-                modifier = Modifier.fillMaxWidth().heightIn(min = minContentHeight).padding(24.dp),
+                modifier =
+                    Modifier
+                        .widthIn(max = dimens.contentMaxWidth)
+                        .fillMaxWidth()
+                        .heightIn(min = minContentHeight)
+                        .padding(dimens.spacingL),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -74,15 +86,15 @@ fun SetupScreen(
                     stringResource(R.string.setup_title),
                     style = MaterialTheme.typography.headlineMedium,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(dimens.spacingS))
                 Text(
                     stringResource(R.string.setup_subtitle, selectedSize),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(dimens.spacingL))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    horizontalArrangement = Arrangement.spacedBy(dimens.spacingS, Alignment.CenterHorizontally),
                 ) {
                     (NQueensRules.MIN_BOARD_SIZE..MAX_PRESET_SIZE).forEach { size ->
                         FilterChip(
@@ -92,11 +104,11 @@ fun SetupScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(dimens.spacingXl))
                 Button(onClick = { onStart(selectedSize) }) {
                     Text(stringResource(R.string.start_game))
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(dimens.spacingS))
                 TextButton(onClick = onLeaderboards) {
                     Text(stringResource(R.string.leaderboard_title))
                 }
@@ -108,8 +120,11 @@ fun SetupScreen(
 // The header keeps the board's own palette in both themes, the way a physical
 // chessboard looks the same at night; the scrim keeps title and status bar readable.
 @Composable
-private fun ChessHeader(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.height(HeaderHeight)) {
+private fun ChessHeader(
+    height: Dp,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.height(height)) {
         Canvas(Modifier.matchParentSize()) {
             val cell = 40.dp.toPx()
             val cols = ceil(size.width / cell).toInt()
@@ -133,9 +148,11 @@ private fun ChessHeader(modifier: Modifier = Modifier) {
                     ),
             )
         }
+        // 0.48 reproduces the original 96sp glyph at the full 200dp header height.
+        val queenFontSize = with(LocalDensity.current) { (height * 0.48f).toSp() }
         Text(
             text = "♛",
-            fontSize = 96.sp,
+            fontSize = queenFontSize,
             color = QueenColor.copy(alpha = 0.55f),
             modifier =
                 Modifier

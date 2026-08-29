@@ -9,7 +9,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -50,9 +53,34 @@ fun TheNQueensTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val containerSize = LocalWindowInfo.current.containerSize
+    val windowClasses = with(LocalDensity.current) {
+        WindowSizeClasses(
+            width = windowWidthClass(containerSize.width.toDp()),
+            height = windowHeightClass(containerSize.height.toDp()),
+        )
+    }
+    val tokenWidth = tokenWidthClass(windowClasses.width, windowClasses.height)
+    CompositionLocalProvider(
+        LocalWindowSizeClasses provides windowClasses,
+        LocalDimens provides dimensFor(tokenWidth),
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography.scaledBy(fontScaleFor(tokenWidth)),
+            content = content
+        )
+    }
+}
+
+object NQueensTheme {
+    val dimens: Dimens
+        @Composable get() = LocalDimens.current
+
+    /**
+     * Raw window classes; dimens and type additionally gate on compact height — see
+     * [tokenWidthClass].
+     */
+    val windowSize: WindowSizeClasses
+        @Composable get() = LocalWindowSizeClasses.current
 }

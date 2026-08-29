@@ -17,6 +17,8 @@ private const val PHONE_LANDSCAPE = "spec:width=891dp,height=411dp"
 @Preview(name = "phone", group = "light", device = Devices.PHONE, showSystemUi = true)
 @Preview(name = "phone landscape", group = "light", device = PHONE_LANDSCAPE, showSystemUi = true)
 @Preview(name = "tablet", group = "light", device = Devices.TABLET, showSystemUi = true)
+@Preview(name = "foldable", group = "light", device = Devices.FOLDABLE, showSystemUi = true)
+@Preview(name = "desktop", group = "light", device = Devices.DESKTOP, showSystemUi = true)
 @Preview(
     name = "small phone (dark)",
     group = "dark",
