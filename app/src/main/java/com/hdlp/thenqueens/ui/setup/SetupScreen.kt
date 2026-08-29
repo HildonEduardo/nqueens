@@ -28,10 +28,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -50,6 +52,8 @@ import com.hdlp.thenqueens.ui.theme.QueenColor
 import kotlin.math.ceil
 
 const val MAX_PRESET_SIZE = 12
+
+private val TitleScrimHeight = 64.dp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -125,7 +129,9 @@ private fun ChessHeader(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.height(height)) {
-        Canvas(Modifier.matchParentSize()) {
+        // The last checker row overdraws past the header when its height is not a
+        // multiple of the cell size; Canvas does not clip on its own.
+        Canvas(Modifier.matchParentSize().clipToBounds()) {
             val cell = 40.dp.toPx()
             val cols = ceil(size.width / cell).toInt()
             val rows = ceil(size.height / cell).toInt()
@@ -143,9 +149,22 @@ private fun ChessHeader(
                     Brush.verticalGradient(
                         0f to QueenColor.copy(alpha = 0.50f),
                         0.35f to Color.Transparent,
-                        0.55f to Color.Transparent,
-                        1f to QueenColor.copy(alpha = 0.88f),
                     ),
+            )
+            // The decorative gradient scales with the header, so short headers compress
+            // its dark band under the title; this band is fixed-height so the title
+            // stays legible at any header size.
+            val titleScrimTop = size.height - TitleScrimHeight.toPx()
+            drawRect(
+                brush =
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        1f to QueenColor.copy(alpha = 0.88f),
+                        startY = titleScrimTop,
+                        endY = size.height,
+                    ),
+                topLeft = Offset(0f, titleScrimTop),
+                size = Size(size.width, TitleScrimHeight.toPx()),
             )
         }
         // 0.48 reproduces the original 96sp glyph at the full 200dp header height.
@@ -162,7 +181,10 @@ private fun ChessHeader(
         )
         Text(
             text = stringResource(R.string.header_title),
-            style = MaterialTheme.typography.headlineMedium,
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    shadow = Shadow(color = QueenColor, offset = Offset(0f, 2f), blurRadius = 8f),
+                ),
             fontWeight = FontWeight.Bold,
             color = LightSquare,
             modifier =
