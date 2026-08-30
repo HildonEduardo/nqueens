@@ -34,6 +34,11 @@ real time, and race your best time.
 - Victory dialog when exactly *n* non-conflicting queens are placed.
 - Queens-left counter, reset, elapsed timer, and per-size best times.
 - Leaderboards screen with the top-3 times for every board size.
+- Adaptive layout: portrait stacks the timer bar over the board; wide windows
+  (landscape phones, tablets, desktop) switch to a two-pane screen with the board
+  beside a stats panel.
+- Backing out of a run asks for confirmation first, with the clock paused while you
+  decide.
 - Spring animation on queen placement/removal and a restrained victory celebration.
 - Sound effects for queen placement, conflicts, and victory (synthesized in-repo, no
   licensed assets).
@@ -100,7 +105,8 @@ com.hdlp.thenqueens
 - The timer starts on the first move, stops on victory, resets with the game, and
   **includes time spent with the app backgrounded** (it is a real-time clock, measured
   with `elapsedRealtime` from a start timestamp — the display ticker is not the source
-  of truth).
+  of truth). The one deliberate exception: pressing back mid-run pauses the clock
+  behind the give-up confirmation, and declining resumes with the paused span excluded.
 - The top three times are kept per board size, sorted fastest-first; a result is
   recorded only when it enters that top three.
 - Restoration: board, status, and timing reference are saved through
@@ -122,17 +128,10 @@ com.hdlp.thenqueens
 | Suite | What it covers | Run with |
 |---|---|---|
 | `domain` (15 tests) | Every conflict axis, multi-queen conflicts return all participants, symmetry/translation properties, known solutions for n = 4, 5, 8, not-solved cases | `testDebugUnitTest` |
-| `data` (5 tests) | DataStore repository: first save, improvement-only recording, per-size isolation, top-3 trimming, legacy single-best migration | `testDebugUnitTest` |
-| `ViewModel` (24 tests) | Place/remove/limit, conflict recalculation, timer start/tick/reset, solved-exactly-once, best-time save, sound-effect emissions, SavedStateHandle round-trips, leaderboard entries | `testDebugUnitTest` |
+| `data` (6 tests) | DataStore repository: first save, improvement-only recording, per-size isolation, top-3 trimming on write and read, legacy single-best migration | `testDebugUnitTest` |
+| ViewModels (29 tests) | Place/remove/limit, conflict recalculation, timer start/tick/pause/resume/reset, solved-exactly-once, best-time save, sound-effect emissions, SavedStateHandle round-trips, leaderboard entries | `testDebugUnitTest` |
+| design system (10 tests) | Window size classes, dimension tokens, type scaling, elapsed-time formatting | `testDebugUnitTest` |
 | UI journeys (5 tests) | Select size → board renders; conflicts marked; reset clears; leaderboard opens and returns; solve 4×4 → victory dialog | `connectedDebugAndroidTest` |
 
 UI tests validate wiring and semantics only — domain behavior is not re-tested through
 the UI.
-
-## Known limitations and next steps
-
-- No undo/redo, hints, or threatened-square preview — each is a small, local extension
-  (new `GameAction` + pure rule function + rendering change) by design.
-- No in-app sound toggle; effects respect the device volume.
-- Landscape works but is not optimized (no two-pane layout).
-- Timer semantics across reboot are documented above rather than preserved.

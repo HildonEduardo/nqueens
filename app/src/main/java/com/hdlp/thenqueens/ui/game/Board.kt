@@ -6,11 +6,13 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.domain.BoardPosition
@@ -39,18 +42,24 @@ fun Board(
     onCellTapped: (BoardPosition) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.aspectRatio(1f)) {
-        repeat(boardSize) { row ->
-            Row(Modifier.weight(1f)) {
-                repeat(boardSize) { column ->
-                    val position = BoardPosition(row, column)
-                    BoardCell(
-                        position = position,
-                        hasQueen = position in queens,
-                        isConflicting = position in conflicts,
-                        onTapped = { onCellTapped(position) },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                    )
+    BoxWithConstraints(modifier.aspectRatio(1f)) {
+        // Every cell is the same size, so the glyph size is measured once here instead
+        // of with a BoxWithConstraints per cell (n² subcompositions).
+        val queenFontSize = with(LocalDensity.current) { (maxWidth / boardSize * 0.6f).toSp() }
+        Column(Modifier.fillMaxSize()) {
+            repeat(boardSize) { row ->
+                Row(Modifier.weight(1f)) {
+                    repeat(boardSize) { column ->
+                        val position = BoardPosition(row, column)
+                        BoardCell(
+                            position = position,
+                            hasQueen = position in queens,
+                            isConflicting = position in conflicts,
+                            queenFontSize = queenFontSize,
+                            onTapped = { onCellTapped(position) },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
                 }
             }
         }
@@ -62,6 +71,7 @@ private fun BoardCell(
     position: BoardPosition,
     hasQueen: Boolean,
     isConflicting: Boolean,
+    queenFontSize: TextUnit,
     onTapped: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,7 +84,7 @@ private fun BoardCell(
         }
     val errorColor = MaterialTheme.colorScheme.error
 
-    BoxWithConstraints(
+    Box(
         modifier =
             modifier
                 .background(if (isLightSquare) LightSquare else DarkSquare)
@@ -96,7 +106,6 @@ private fun BoardCell(
             label = "queenScale",
         )
         if (queenScale > 0.01f) {
-            val queenFontSize = with(LocalDensity.current) { (maxWidth * 0.6f).toSp() }
             Text(
                 text = "♛",
                 fontSize = queenFontSize,

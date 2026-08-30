@@ -3,6 +3,7 @@ package com.hdlp.thenqueens.data
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import app.cash.turbine.test
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -62,6 +63,19 @@ class DataStoreBestTimeRepositoryTest {
         repository.saveIfBetter(4, 7_000L)
         repository.observeTopTimes(4).test {
             assertEquals(listOf(5_000L, 7_000L, 9_000L), awaitItem())
+        }
+    }
+
+    @Test
+    fun `an oversized stored list is capped on read`() = runTest {
+        val dataStore =
+            PreferenceDataStoreFactory.create(scope = backgroundScope) {
+                tmp.newFile("oversized.preferences_pb")
+            }
+        dataStore.edit { it[stringPreferencesKey("best_times_4")] = "1000,2000,3000,4000,5000" }
+        val repository = DataStoreBestTimeRepository(dataStore)
+        repository.observeTopTimes(4).test {
+            assertEquals(listOf(1_000L, 2_000L, 3_000L), awaitItem())
         }
     }
 

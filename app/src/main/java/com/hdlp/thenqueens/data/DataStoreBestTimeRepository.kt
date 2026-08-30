@@ -31,9 +31,10 @@ class DataStoreBestTimeRepository @Inject constructor(
         }
     }
 
-    // Falls back to the single-best key that predates the leaderboard.
+    // Falls back to the single-best key that predates the leaderboard. Capping on read
+    // keeps the top-N invariant even against data written with a larger cap.
     private fun Preferences.topTimes(boardSize: Int): List<Long> =
-        this[topTimesKey(boardSize)]?.split(',')?.mapNotNull(String::toLongOrNull)
+        this[topTimesKey(boardSize)]?.split(',')?.mapNotNull(String::toLongOrNull)?.take(TOP_TIMES_COUNT)
             ?: listOfNotNull(this[legacyBestTimeKey(boardSize)])
 
     private fun topTimesKey(boardSize: Int) = stringPreferencesKey("best_times_$boardSize")
