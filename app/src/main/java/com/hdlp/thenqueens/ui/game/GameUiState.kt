@@ -10,6 +10,8 @@ data class GameUiState(
     val status: GameStatus = GameStatus.NOT_STARTED,
     val elapsedMillis: Long = 0L,
     val bestTimeMillis: Long? = null,
+    val canUndo: Boolean = false,
+    val canRedo: Boolean = false,
 ) {
     val queensLeft: Int get() = boardSize - queens.size
     val isSolved: Boolean get() = status == GameStatus.SOLVED

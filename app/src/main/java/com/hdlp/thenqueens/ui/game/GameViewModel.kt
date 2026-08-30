@@ -48,6 +48,11 @@ class GameViewModel
         private var pausedAtRealtimeMillis: Long? = savedStateHandle[KEY_PAUSED_AT]
         private var tickerJob: Job? = null
 
+        // Board snapshots before/after the present one. In-memory only: the ViewModel
+        // outlives rotation, and losing history on process death is an accepted trade-off.
+        private val past = ArrayDeque<Set<BoardPosition>>()
+        private val future = ArrayDeque<Set<BoardPosition>>()
+
         init {
             viewModelScope.launch {
                 bestTimeRepository.observeBestTime(boardSize).collect { best ->
@@ -62,6 +67,8 @@ class GameViewModel
         fun onAction(action: GameAction) {
             when (action) {
                 is GameAction.CellTapped -> onCellTapped(action.position)
+                GameAction.UndoClicked -> undo()
+                GameAction.RedoClicked -> redo()
                 GameAction.ResetClicked, GameAction.PlayAgainClicked -> reset()
                 GameAction.PauseRequested -> pause()
                 GameAction.ResumeRequested -> resume()
@@ -82,6 +89,8 @@ class GameViewModel
             if (current.status == GameStatus.NOT_STARTED) {
                 startTimer()
             }
+            past.addLast(current.queens)
+            future.clear()
 
             val conflicts = NQueensRules.conflictingQueens(queens)
             val solved = queens.size == boardSize && conflicts.isEmpty()
@@ -92,6 +101,8 @@ class GameViewModel
                     conflicts = conflicts,
                     status = if (solved) GameStatus.SOLVED else GameStatus.IN_PROGRESS,
                     elapsedMillis = elapsed,
+                    canUndo = !solved,
+                    canRedo = false,
                 )
             }
             persist()
@@ -112,10 +123,40 @@ class GameViewModel
             viewModelScope.launch { bestTimeRepository.saveIfBetter(boardSize, elapsedMillis) }
         }
 
+        private fun undo() {
+            if (_state.value.status == GameStatus.SOLVED || pausedAtRealtimeMillis != null) return
+            val previous = past.removeLastOrNull() ?: return
+            future.addLast(_state.value.queens)
+            restoreFromHistory(previous)
+        }
+
+        private fun redo() {
+            if (_state.value.status == GameStatus.SOLVED || pausedAtRealtimeMillis != null) return
+            val next = future.removeLastOrNull() ?: return
+            past.addLast(_state.value.queens)
+            restoreFromHistory(next)
+        }
+
+        // History never holds a solved board (the solving tap blocks further undo/redo),
+        // so restoring only re-derives conflicts and leaves status and the clock untouched.
+        private fun restoreFromHistory(queens: Set<BoardPosition>) {
+            _state.update {
+                it.copy(
+                    queens = queens,
+                    conflicts = NQueensRules.conflictingQueens(queens),
+                    canUndo = past.isNotEmpty(),
+                    canRedo = future.isNotEmpty(),
+                )
+            }
+            persist()
+        }
+
         private fun reset() {
             stopTicker()
             startRealtimeMillis = null
             pausedAtRealtimeMillis = null
+            past.clear()
+            future.clear()
             _state.update { GameUiState(boardSize = boardSize, bestTimeMillis = it.bestTimeMillis) }
             persist()
         }

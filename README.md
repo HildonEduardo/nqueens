@@ -33,6 +33,9 @@ real time, and race your best time.
   red border — never color alone), not just the most recent one.
 - Victory dialog when exactly *n* non-conflicting queens are placed.
 - Queens-left counter, reset, elapsed timer, and per-size best times.
+- Undo/redo through the full move history (places and removals). History lives in
+  memory only: it survives rotation but not process death, and the clock keeps
+  running — undoing moves never refunds time.
 - Leaderboards screen with the top-3 times for every board size.
 - Adaptive layout: portrait stacks the timer bar over the board; wide windows
   (landscape phones, tablets, desktop) switch to a two-pane screen with the board

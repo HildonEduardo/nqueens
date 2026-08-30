@@ -56,6 +56,21 @@ class GameJourneyTest {
     }
 
     @Test
+    fun undoAndRedo_stepThroughTheMoveHistory() {
+        startGame(4)
+        tapCell(1, 1)
+        tapCell(2, 3)
+        composeRule.onNodeWithContentDescription("Undo").performClick()
+        composeRule
+            .onAllNodes(hasContentDescription("queen", substring = true))
+            .assertCountEquals(1)
+        composeRule.onNodeWithContentDescription("Redo").performClick()
+        composeRule
+            .onAllNodes(hasContentDescription("queen", substring = true))
+            .assertCountEquals(2)
+    }
+
+    @Test
     fun leaderboard_opensAndNavigatesBack() {
         composeRule.onNodeWithText("Leaderboards").performClick()
         composeRule.onNodeWithContentDescription("Back").assertExists()

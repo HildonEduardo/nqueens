@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.min
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -124,6 +125,7 @@ private fun GameScreenContent(
                         navigationIcon = { BackButton(onBackClicked) },
                         title = { Text(formatElapsed(state.elapsedMillis)) },
                         actions = {
+                            UndoRedoButtons(state = state, onAction = onAction)
                             TextButton(onClick = { onAction(GameAction.ResetClicked) }) {
                                 Text(stringResource(R.string.reset))
                             }
@@ -234,6 +236,9 @@ private fun WideGameContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(dimens.spacingS)) {
+                    UndoRedoButtons(state = state, onAction = onAction)
+                }
                 FilledTonalButton(onClick = { onAction(GameAction.ResetClicked) }) {
                     Icon(Icons.Filled.Refresh, contentDescription = null)
                     Spacer(Modifier.width(dimens.spacingS))
@@ -244,6 +249,31 @@ private fun WideGameContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun UndoRedoButtons(
+    state: GameUiState,
+    onAction: (GameAction) -> Unit,
+) {
+    IconButton(
+        onClick = { onAction(GameAction.UndoClicked) },
+        enabled = state.canUndo,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_undo),
+            contentDescription = stringResource(R.string.undo),
+        )
+    }
+    IconButton(
+        onClick = { onAction(GameAction.RedoClicked) },
+        enabled = state.canRedo,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_redo),
+            contentDescription = stringResource(R.string.redo),
+        )
     }
 }
 
@@ -296,6 +326,7 @@ private fun GameScreenPreview() {
                 status = GameStatus.IN_PROGRESS,
                 elapsedMillis = 83_456L,
                 bestTimeMillis = 61_002L,
+                canUndo = true,
             ),
             onAction = {},
             onBackClicked = {},

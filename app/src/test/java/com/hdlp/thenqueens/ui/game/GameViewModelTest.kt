@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -267,6 +268,100 @@ class GameViewModelTest {
         clock.nowMillis = 6_000L
         advanceTimeBy(GameViewModel.TICK_MILLIS + 1)
         assertEquals(1_000L, vm.state.value.elapsedMillis)
+    }
+
+    @Test
+    fun `undo restores the previous board and recalculates conflicts`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 0)
+        vm.tap(0, 2)
+        vm.onAction(GameAction.UndoClicked)
+        assertEquals(setOf(BoardPosition(0, 0)), vm.state.value.queens)
+        assertEquals(emptySet<BoardPosition>(), vm.state.value.conflicts)
+    }
+
+    @Test
+    fun `undo restores a removed queen`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.tap(0, 1)
+        vm.onAction(GameAction.UndoClicked)
+        assertEquals(setOf(BoardPosition(0, 1)), vm.state.value.queens)
+    }
+
+    @Test
+    fun `undo of the first move keeps the game in progress`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.UndoClicked)
+        assertEquals(emptySet<BoardPosition>(), vm.state.value.queens)
+        assertEquals(GameStatus.IN_PROGRESS, vm.state.value.status)
+        assertFalse(vm.state.value.canUndo)
+        assertTrue(vm.state.value.canRedo)
+    }
+
+    @Test
+    fun `redo reapplies an undone move`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.tap(1, 3)
+        vm.onAction(GameAction.UndoClicked)
+        vm.onAction(GameAction.RedoClicked)
+        assertEquals(setOf(BoardPosition(0, 1), BoardPosition(1, 3)), vm.state.value.queens)
+        assertTrue(vm.state.value.canUndo)
+        assertFalse(vm.state.value.canRedo)
+    }
+
+    @Test
+    fun `a new move clears the redo history`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.UndoClicked)
+        vm.tap(2, 0)
+        assertFalse(vm.state.value.canRedo)
+        vm.onAction(GameAction.RedoClicked)
+        assertEquals(setOf(BoardPosition(2, 0)), vm.state.value.queens)
+    }
+
+    @Test
+    fun `undo and redo without history are no-ops`() = runVmTest {
+        val vm = viewModel()
+        vm.onAction(GameAction.UndoClicked)
+        vm.onAction(GameAction.RedoClicked)
+        assertEquals(GameUiState(boardSize = 4), vm.state.value)
+    }
+
+    @Test
+    fun `undo and redo are ignored after solving`() = runVmTest {
+        val vm = viewModel()
+        vm.solveFourByFour()
+        vm.onAction(GameAction.UndoClicked)
+        assertEquals(4, vm.state.value.queens.size)
+        assertTrue(vm.state.value.isSolved)
+        assertFalse(vm.state.value.canUndo)
+    }
+
+    @Test
+    fun `undo and redo while paused are ignored`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.PauseRequested)
+        vm.onAction(GameAction.UndoClicked)
+        assertEquals(setOf(BoardPosition(0, 1)), vm.state.value.queens)
+    }
+
+    @Test
+    fun `reset clears the undo and redo history`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.tap(1, 3)
+        vm.onAction(GameAction.UndoClicked)
+        vm.onAction(GameAction.ResetClicked)
+        assertFalse(vm.state.value.canUndo)
+        assertFalse(vm.state.value.canRedo)
+        vm.onAction(GameAction.UndoClicked)
+        vm.onAction(GameAction.RedoClicked)
+        assertEquals(emptySet<BoardPosition>(), vm.state.value.queens)
     }
 
     @Test
