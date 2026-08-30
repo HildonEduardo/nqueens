@@ -31,6 +31,8 @@ class SoundEffectsPlayer(context: Context) {
                 GameEffect.QueenPlaced -> placeId
                 GameEffect.ConflictCreated -> conflictId
                 GameEffect.Victory -> victoryId
+                // The snackbar carries this one; a sound would double up on it.
+                GameEffect.HintUnavailable -> return
             }
         soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
     }

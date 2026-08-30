@@ -6,4 +6,6 @@ sealed interface GameEffect {
     data object ConflictCreated : GameEffect
 
     data object Victory : GameEffect
+
+    data object HintUnavailable : GameEffect
 }

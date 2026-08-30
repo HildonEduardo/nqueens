@@ -7,6 +7,9 @@
     <string name="start_game">Start</string>
     <string name="queens_left">Queens left: %1$d</string>
     <string name="best_time">Best: %1$s</string>
+    <string name="hint">Hint</string>
+    <string name="hint_unavailable">No hint available — try removing a queen</string>
+    <string name="cell_hint_suffix">", hint"</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
     <string name="reset">Reset</string>

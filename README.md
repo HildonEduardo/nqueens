@@ -36,6 +36,11 @@ real time, and race your best time.
 - Undo/redo through the full move history (places and removals). History lives in
   memory only: it survives rotation but not process death, and the clock keeps
   running — undoing moves never refunds time.
+- Hint button backed by a backtracking solver: it highlights one safe cell that
+  still leads to a full solution from the current board — the player places the
+  queen themselves, and the highlight clears on the next move. If the board has
+  conflicts or is a dead end, a snackbar says so instead of suggesting a removal.
+  Hints never affect the clock.
 - Leaderboards screen with the top-3 times for every board size.
 - Adaptive layout: portrait stacks the timer bar over the board; wide windows
   (landscape phones, tablets, desktop) switch to a two-pane screen with the board

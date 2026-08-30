@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.domain.BoardPosition
 import com.hdlp.thenqueens.ui.theme.DarkSquare
+import com.hdlp.thenqueens.ui.theme.HintColor
 import com.hdlp.thenqueens.ui.theme.LightSquare
 import com.hdlp.thenqueens.ui.theme.QueenColor
 
@@ -39,6 +40,7 @@ fun Board(
     boardSize: Int,
     queens: Set<BoardPosition>,
     conflicts: Set<BoardPosition>,
+    hintPosition: BoardPosition?,
     onCellTapped: (BoardPosition) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -55,6 +57,7 @@ fun Board(
                             position = position,
                             hasQueen = position in queens,
                             isConflicting = position in conflicts,
+                            isHint = position == hintPosition,
                             queenFontSize = queenFontSize,
                             onTapped = { onCellTapped(position) },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -71,6 +74,7 @@ private fun BoardCell(
     position: BoardPosition,
     hasQueen: Boolean,
     isConflicting: Boolean,
+    isHint: Boolean,
     queenFontSize: TextUnit,
     onTapped: () -> Unit,
     modifier: Modifier = Modifier,
@@ -81,6 +85,7 @@ private fun BoardCell(
             append(stringResource(R.string.cell_description, position.row + 1, position.column + 1))
             if (hasQueen) append(stringResource(R.string.cell_queen_suffix))
             if (isConflicting) append(stringResource(R.string.cell_conflict_suffix))
+            if (isHint) append(stringResource(R.string.cell_hint_suffix))
         }
     val errorColor = MaterialTheme.colorScheme.error
 
@@ -88,7 +93,13 @@ private fun BoardCell(
         modifier =
             modifier
                 .background(if (isLightSquare) LightSquare else DarkSquare)
-                .then(if (isConflicting) Modifier.border(2.dp, errorColor) else Modifier)
+                .then(
+                    when {
+                        isConflicting -> Modifier.border(2.dp, errorColor)
+                        isHint -> Modifier.border(2.dp, HintColor)
+                        else -> Modifier
+                    },
+                )
                 .clickable { onTapped() }
                 .semantics {
                     contentDescription = description
@@ -115,6 +126,14 @@ private fun BoardCell(
                         scaleX = queenScale
                         scaleY = queenScale
                     },
+            )
+        }
+        // Ghost glyph so the suggestion reads by shape, not border color alone.
+        if (isHint && !hasQueen) {
+            Text(
+                text = "♛",
+                fontSize = queenFontSize,
+                color = HintColor.copy(alpha = 0.65f),
             )
         }
     }

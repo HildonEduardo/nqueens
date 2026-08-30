@@ -8,6 +8,7 @@ import com.hdlp.thenqueens.data.FakeBestTimeRepository
 import com.hdlp.thenqueens.data.FakeClock
 import com.hdlp.thenqueens.domain.BoardPosition
 import com.hdlp.thenqueens.domain.GameStatus
+import com.hdlp.thenqueens.domain.NQueensRules
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -15,6 +16,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -362,6 +365,87 @@ class GameViewModelTest {
         vm.onAction(GameAction.UndoClicked)
         vm.onAction(GameAction.RedoClicked)
         assertEquals(emptySet<BoardPosition>(), vm.state.value.queens)
+    }
+
+    @Test
+    fun `hint on an empty board suggests a cell of a valid solution`() = runVmTest {
+        val vm = viewModel()
+        vm.onAction(GameAction.HintClicked)
+        assertEquals(BoardPosition(0, 1), vm.state.value.hintPosition)
+        assertEquals(GameStatus.NOT_STARTED, vm.state.value.status)
+    }
+
+    @Test
+    fun `hint on an extendable board suggests an unoccupied safe cell`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.HintClicked)
+        val hint = vm.state.value.hintPosition
+        assertNotNull(hint)
+        assertFalse(hint in vm.state.value.queens)
+        assertEquals(
+            emptySet<BoardPosition>(),
+            NQueensRules.conflictingQueens(vm.state.value.queens + hint!!),
+        )
+    }
+
+    @Test
+    fun `hint with conflicts emits HintUnavailable and suggests nothing`() = runVmTest {
+        val vm = viewModel()
+        vm.effects.test {
+            advanceUntilIdle()
+            vm.tap(0, 0)
+            vm.tap(0, 2)
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            assertEquals(GameEffect.ConflictCreated, awaitItem())
+            vm.onAction(GameAction.HintClicked)
+            assertEquals(GameEffect.HintUnavailable, awaitItem())
+        }
+        assertNull(vm.state.value.hintPosition)
+    }
+
+    @Test
+    fun `hint on a dead-end board emits HintUnavailable`() = runVmTest {
+        val vm = viewModel()
+        vm.effects.test {
+            advanceUntilIdle()
+            vm.tap(0, 0)
+            assertEquals(GameEffect.QueenPlaced, awaitItem())
+            vm.onAction(GameAction.HintClicked)
+            assertEquals(GameEffect.HintUnavailable, awaitItem())
+        }
+        assertNull(vm.state.value.hintPosition)
+    }
+
+    @Test
+    fun `tapping a cell clears the hint`() = runVmTest {
+        val vm = viewModel()
+        vm.onAction(GameAction.HintClicked)
+        vm.tap(0, 1)
+        assertNull(vm.state.value.hintPosition)
+    }
+
+    @Test
+    fun `undo clears the hint`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.HintClicked)
+        vm.onAction(GameAction.UndoClicked)
+        assertNull(vm.state.value.hintPosition)
+    }
+
+    @Test
+    fun `hint is ignored while paused and after solving`() = runVmTest {
+        val vm = viewModel()
+        vm.tap(0, 1)
+        vm.onAction(GameAction.PauseRequested)
+        vm.onAction(GameAction.HintClicked)
+        assertNull(vm.state.value.hintPosition)
+        vm.onAction(GameAction.ResumeRequested)
+        vm.tap(1, 3); vm.tap(2, 0); vm.tap(3, 2)
+        assertTrue(vm.state.value.isSolved)
+        vm.onAction(GameAction.HintClicked)
+        assertNull(vm.state.value.hintPosition)
     }
 
     @Test

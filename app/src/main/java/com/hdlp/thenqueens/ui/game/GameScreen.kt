@@ -23,6 +23,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -30,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +49,7 @@ import com.hdlp.thenqueens.ui.preview.NQueensPreview
 import com.hdlp.thenqueens.ui.preview.NQueensPreviewSurface
 import com.hdlp.thenqueens.ui.theme.NQueensTheme
 import com.hdlp.thenqueens.ui.victory.VictoryDialog
+import kotlinx.coroutines.launch
 
 @Composable
 fun GameScreen(
@@ -55,8 +59,16 @@ fun GameScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     val soundPlayer = rememberSoundEffectsPlayer()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val hintUnavailableMessage = stringResource(R.string.hint_unavailable)
     LaunchedEffect(viewModel) {
-        viewModel.effects.collect { soundPlayer.play(it) }
+        viewModel.effects.collect { effect ->
+            soundPlayer.play(effect)
+            if (effect == GameEffect.HintUnavailable) {
+                // showSnackbar suspends until dismissal; launching keeps effects flowing.
+                launch { snackbarHostState.showSnackbar(hintUnavailableMessage) }
+            }
+        }
     }
 
     var showGiveUpDialog by rememberSaveable { mutableStateOf(false) }
@@ -75,6 +87,7 @@ fun GameScreen(
         state = state,
         onAction = viewModel::onAction,
         onBackClicked = onBackClicked,
+        snackbarHostState = snackbarHostState,
     )
 
     // Dialogs must close before the pop, or they linger over the exit transition.
@@ -112,6 +125,7 @@ private fun GameScreenContent(
     state: GameUiState,
     onAction: (GameAction) -> Unit,
     onBackClicked: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val dimens = NQueensTheme.dimens
@@ -125,6 +139,7 @@ private fun GameScreenContent(
                         navigationIcon = { BackButton(onBackClicked) },
                         title = { Text(formatElapsed(state.elapsedMillis)) },
                         actions = {
+                            HintButton(state = state, onAction = onAction)
                             UndoRedoButtons(state = state, onAction = onAction)
                             TextButton(onClick = { onAction(GameAction.ResetClicked) }) {
                                 Text(stringResource(R.string.reset))
@@ -133,6 +148,7 @@ private fun GameScreenContent(
                     )
                 }
             },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
             if (isWide) {
                 WideGameContent(
@@ -185,6 +201,7 @@ private fun TallGameContent(
                 boardSize = state.boardSize,
                 queens = state.queens,
                 conflicts = state.conflicts,
+                hintPosition = state.hintPosition,
                 onCellTapped = { onAction(GameAction.CellTapped(it)) },
                 modifier = Modifier.width(boardSide),
             )
@@ -210,6 +227,7 @@ private fun WideGameContent(
                 boardSize = state.boardSize,
                 queens = state.queens,
                 conflicts = state.conflicts,
+                hintPosition = state.hintPosition,
                 onCellTapped = { onAction(GameAction.CellTapped(it)) },
                 modifier = Modifier.width(boardSide).align(Alignment.Center),
             )
@@ -237,6 +255,7 @@ private fun WideGameContent(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(dimens.spacingS)) {
+                    HintButton(state = state, onAction = onAction)
                     UndoRedoButtons(state = state, onAction = onAction)
                 }
                 FilledTonalButton(onClick = { onAction(GameAction.ResetClicked) }) {
@@ -249,6 +268,22 @@ private fun WideGameContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HintButton(
+    state: GameUiState,
+    onAction: (GameAction) -> Unit,
+) {
+    IconButton(
+        onClick = { onAction(GameAction.HintClicked) },
+        enabled = !state.isSolved,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_hint),
+            contentDescription = stringResource(R.string.hint),
+        )
     }
 }
 

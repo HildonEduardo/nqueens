@@ -8,6 +8,7 @@ import com.hdlp.thenqueens.data.GameClock
 import com.hdlp.thenqueens.domain.BoardPosition
 import com.hdlp.thenqueens.domain.GameStatus
 import com.hdlp.thenqueens.domain.NQueensRules
+import com.hdlp.thenqueens.domain.NQueensSolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -67,6 +68,7 @@ class GameViewModel
         fun onAction(action: GameAction) {
             when (action) {
                 is GameAction.CellTapped -> onCellTapped(action.position)
+                GameAction.HintClicked -> hint()
                 GameAction.UndoClicked -> undo()
                 GameAction.RedoClicked -> redo()
                 GameAction.ResetClicked, GameAction.PlayAgainClicked -> reset()
@@ -103,6 +105,7 @@ class GameViewModel
                     elapsedMillis = elapsed,
                     canUndo = !solved,
                     canRedo = false,
+                    hintPosition = null,
                 )
             }
             persist()
@@ -121,6 +124,23 @@ class GameViewModel
         private fun onSolved(elapsedMillis: Long) {
             stopTicker()
             viewModelScope.launch { bestTimeRepository.saveIfBetter(boardSize, elapsedMillis) }
+        }
+
+        private fun hint() {
+            val current = _state.value
+            if (current.status == GameStatus.SOLVED || pausedAtRealtimeMillis != null) return
+            val solution =
+                if (current.conflicts.isEmpty()) {
+                    NQueensSolver.solutionContaining(boardSize, current.queens)
+                } else {
+                    null
+                }
+            if (solution == null) {
+                _effects.tryEmit(GameEffect.HintUnavailable)
+                return
+            }
+            val suggestion = (solution - current.queens).minByOrNull { it.row } ?: return
+            _state.update { it.copy(hintPosition = suggestion) }
         }
 
         private fun undo() {
@@ -146,6 +166,7 @@ class GameViewModel
                     conflicts = NQueensRules.conflictingQueens(queens),
                     canUndo = past.isNotEmpty(),
                     canRedo = future.isNotEmpty(),
+                    hintPosition = null,
                 )
             }
             persist()

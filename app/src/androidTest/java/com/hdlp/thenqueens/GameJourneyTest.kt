@@ -71,6 +71,15 @@ class GameJourneyTest {
     }
 
     @Test
+    fun hint_suggestsACell_thatBecomesAQueenWhenTapped() {
+        startGame(4)
+        composeRule.onNodeWithContentDescription("Hint").performClick()
+        composeRule.onNodeWithContentDescription("Row 1, column 2, hint").assertExists()
+        tapCell(1, 2)
+        composeRule.onNodeWithContentDescription("Row 1, column 2, queen").assertExists()
+    }
+
+    @Test
     fun leaderboard_opensAndNavigatesBack() {
         composeRule.onNodeWithText("Leaderboards").performClick()
         composeRule.onNodeWithContentDescription("Back").assertExists()
