@@ -1,5 +1,6 @@
 package com.hdlp.thenqueens.ui.setup
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,11 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import androidx.core.view.WindowCompat
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.domain.NQueensRules
 import com.hdlp.thenqueens.ui.preview.NQueensPreview
@@ -54,6 +60,7 @@ import kotlin.math.ceil
 const val MAX_PRESET_SIZE = 12
 
 private val TitleScrimHeight = 64.dp
+private val StatusScrimFade = 24.dp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -64,9 +71,15 @@ fun SetupScreen(
 ) {
     var selectedSize by rememberSaveable { mutableIntStateOf(8) }
 
+    LightStatusBarIcons()
+
     BoxWithConstraints(modifier.fillMaxSize()) {
         val dimens = NQueensTheme.dimens
-        val headerHeight = min(dimens.headerMaxHeight, maxHeight * dimens.headerMaxHeightFraction)
+        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        // The header bleeds under the status bar, so its height is measured on top of that
+        // inset: what stays visible below the bar is the same at any status bar height.
+        val headerHeight =
+            min(dimens.headerMaxHeight, maxHeight * dimens.headerMaxHeightFraction) + statusBarHeight
         // The scroll makes the column's height unbounded, so the min height re-creates
         // what weight(1f) used to do: center the content in the leftover viewport when
         // it fits, and only scroll (e.g. in landscape) when it doesn't.
@@ -75,7 +88,11 @@ fun SetupScreen(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ChessHeader(height = headerHeight, modifier = Modifier.fillMaxWidth())
+            ChessHeader(
+                height = headerHeight,
+                statusBarHeight = statusBarHeight,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Column(
                 modifier =
                     Modifier
@@ -124,6 +141,7 @@ fun SetupScreen(
 @Composable
 private fun ChessHeader(
     height: Dp,
+    statusBarHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.height(height)) {
@@ -142,12 +160,24 @@ private fun ChessHeader(
                     )
                 }
             }
+            // The status bar draws over the checkers, whose colors are fixed while the
+            // system flips icon appearance with the theme; this band is tied to the inset
+            // (not a fraction of the header) so the icons keep the same dark backdrop.
+            val statusScrimHeight = statusBarHeight.toPx()
+            drawRect(
+                color = QueenColor.copy(alpha = 0.72f),
+                size = Size(size.width, statusScrimHeight),
+            )
             drawRect(
                 brush =
                     Brush.verticalGradient(
-                        0f to QueenColor.copy(alpha = 0.50f),
-                        0.35f to Color.Transparent,
+                        0f to QueenColor.copy(alpha = 0.72f),
+                        1f to Color.Transparent,
+                        startY = statusScrimHeight,
+                        endY = statusScrimHeight + StatusScrimFade.toPx(),
                     ),
+                topLeft = Offset(0f, statusScrimHeight),
+                size = Size(size.width, StatusScrimFade.toPx()),
             )
             // The decorative gradient scales with the header, so short headers compress
             // its dark band under the title; this band is fixed-height so the title
@@ -165,31 +195,50 @@ private fun ChessHeader(
                 size = Size(size.width, TitleScrimHeight.toPx()),
             )
         }
-        // 0.48 reproduces the original 96sp glyph at the full 200dp header height.
-        val queenFontSize = with(LocalDensity.current) { (height * 0.48f).toSp() }
-        Text(
-            text = "♛",
-            fontSize = queenFontSize,
-            color = QueenColor.copy(alpha = 0.55f),
-            modifier =
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 28.dp)
-                    .graphicsLayer { rotationZ = -10f },
-        )
-        Text(
-            text = stringResource(R.string.header_title),
-            style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    shadow = Shadow(color = QueenColor, offset = Offset(0f, 2f), blurRadius = 8f),
-                ),
-            fontWeight = FontWeight.Bold,
-            color = LightSquare,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 24.dp, vertical = 18.dp),
-        )
+        // Only the checkers bleed under the status bar; the title and glyph lay out
+        // against the visible header, unchanged by the inset.
+        Box(Modifier.matchParentSize().padding(top = statusBarHeight)) {
+            // 0.48 reproduces the original 96sp glyph at the full 200dp header height.
+            val queenFontSize = with(LocalDensity.current) { ((height - statusBarHeight) * 0.48f).toSp() }
+            Text(
+                text = "♛",
+                fontSize = queenFontSize,
+                color = QueenColor.copy(alpha = 0.55f),
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 28.dp)
+                        .graphicsLayer { rotationZ = -10f },
+            )
+            Text(
+                text = stringResource(R.string.header_title),
+                style =
+                    MaterialTheme.typography.headlineMedium.copy(
+                        shadow = Shadow(color = QueenColor, offset = Offset(0f, 2f), blurRadius = 8f),
+                    ),
+                fontWeight = FontWeight.Bold,
+                color = LightSquare,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 24.dp, vertical = 18.dp),
+            )
+        }
+    }
+}
+
+// The hero's checkers are fixed colors, so the system's theme-driven icon appearance can
+// land light-on-light there; the status scrim is always dark, so pin light icons for as
+// long as this screen is on top.
+@Composable
+private fun LightStatusBarIcons() {
+    val activity = LocalActivity.current ?: return
+    DisposableEffect(activity) {
+        val window = activity.window
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        val previous = controller.isAppearanceLightStatusBars
+        controller.isAppearanceLightStatusBars = false
+        onDispose { controller.isAppearanceLightStatusBars = previous }
     }
 }
 
