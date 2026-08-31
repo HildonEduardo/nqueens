@@ -41,7 +41,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.min
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.hdlp.thenqueens.R
 import com.hdlp.thenqueens.domain.BoardPosition
 import com.hdlp.thenqueens.domain.GameStatus
@@ -61,12 +64,15 @@ fun GameScreen(
     val soundPlayer = rememberSoundEffectsPlayer()
     val snackbarHostState = remember { SnackbarHostState() }
     val hintUnavailableMessage = stringResource(R.string.hint_unavailable)
-    LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            soundPlayer.play(effect)
-            if (effect == GameEffect.HintUnavailable) {
-                // showSnackbar suspends until dismissal; launching keeps effects flowing.
-                launch { snackbarHostState.showSnackbar(hintUnavailableMessage) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effects.collect { effect ->
+                soundPlayer.play(effect)
+                if (effect == GameEffect.HintUnavailable) {
+                    // showSnackbar suspends until dismissal; launching keeps effects flowing.
+                    launch { snackbarHostState.showSnackbar(hintUnavailableMessage) }
+                }
             }
         }
     }

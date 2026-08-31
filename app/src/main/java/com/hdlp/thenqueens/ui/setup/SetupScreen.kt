@@ -121,8 +121,6 @@ fun SetupScreen(
     }
 }
 
-// The header keeps the board's own palette in both themes, the way a physical
-// chessboard looks the same at night; the scrim keeps title and status bar readable.
 @Composable
 private fun ChessHeader(
     height: Dp,
