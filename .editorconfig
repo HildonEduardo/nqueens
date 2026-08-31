@@ -1,0 +1,30 @@
+# Read by both the ktlint Gradle tasks and Android Studio's formatter, so the two agree.
+# See the `subprojects` block in the root build.gradle.kts for how ktlint is wired up.
+#
+# Scoped deliberately: the Kotlin sections carry the ktlint configuration, and nothing here
+# reaches into `functions/` (TypeScript, checked by `tsc --noEmit`) or the markdown docs,
+# where trailing whitespace is a line break rather than a mistake.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.kt]
+indent_size = 4
+trim_trailing_whitespace = true
+ktlint_code_style = ktlint_official
+# Composables are PascalCase by convention, which is exactly what `function-naming` flags.
+# Without this the ruleset reports every @Composable in the project.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Gradle Kotlin DSL is 2-space in this repo; Kotlin sources are 4. ktlint does not run over
+# these files at all (the root build.gradle.kts disables the Kotlin-script tasks and says why);
+# this section is here for the IDE formatter.
+[*.kts]
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.xml]
+indent_size = 4
